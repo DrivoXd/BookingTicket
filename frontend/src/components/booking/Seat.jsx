@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { updateReservedSeats } from "../../redux/seatSlice";
 import axios from "axios";
+import io from "socket.io-client"; // Import WebSocket client
+
+const socket = io("http://localhost:6969"); // Connect to backend WebSocket
 
 const Seat = () => {
   const navigate = useNavigate();
@@ -65,6 +68,19 @@ const Seat = () => {
 
     fetchReservedSeats(); // Call fetch function to get reserved seats
   }, [dispatch, movieName, location, timing, hallName, day, date, month]);
+   
+   //  WebSocket for Real-Time Seat Updates**
+   useEffect(() => {
+    socket.on("seatUpdate", (data) => {
+      dispatch(updateReservedSeats(data.reservedSeats));
+    });
+
+    return () => {
+      socket.off("seatUpdate"); // Clean up listener on unmount
+    };
+  }, [dispatch]);
+
+  
 
   // Update amount when selectedSeats changes
   useEffect(() => {

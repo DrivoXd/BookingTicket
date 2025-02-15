@@ -121,6 +121,11 @@ router.post('/api/verify-payment', async (req, res) => {
       },
       { upsert: true, new: true } // Create the document if it doesn't exist
     );
+   
+    if (!global.io) {
+      console.error('⚠️ Socket.io instance not found!');
+      return res.status(500).json({ message: 'Socket.io is not initialized' });
+    }
 
     // Fetch updated reserved seats
     const allreservations = await ReservedSeat.find({
@@ -133,9 +138,14 @@ router.post('/api/verify-payment', async (req, res) => {
       month: bookingDetails.month,
     });
 
+    const reservedSeatsList = allreservations.map((res) => res.reservedSeats).flat();
+
+    // Emit real-time update to all connected clients
+    global.io.emit('seatUpdate', { reservedSeats: reservedSeatsList });
+
     res.status(200).json({
       message: 'Payment verified and seats booked',
-      reservedSeats: allreservations.map((res) => res.reservedSeats).flat(),
+      reservedSeats: reservedSeatsList,
       userBookings: updatedUser.bookings,
     });
   } catch (error) {
